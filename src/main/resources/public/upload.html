@@ -1,0 +1,56 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+	<script src="https://code.jquery.com/jquery-1.12.4.min.js"
+		integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+		crossorigin="anonymous"></script>
+
+
+
+	<div>
+		<form id="form" method="POST" enctype="multipart/form-data">
+			<div>
+				create: <input type="radio" name="action" value="/create"
+					checked="true" /> update:<input type="radio" name="action"
+					value="/update" />
+			</div>
+			<div>
+				name: <input name="name" value="akcs-ui" />
+			</div>
+			<div>
+				type: <input name="type" value="html" />
+			</div>
+			<div>
+				<input type="file" name="file" />
+			</div>
+			<div>
+				<input type="submit" value="Create Application" />
+			</div>
+		</form>
+	</div>
+
+
+	<script>
+		//form Submit
+		$("#form").submit(function(evt) {
+			evt.preventDefault();
+			var formData = new FormData($('#form')[0]);
+			var action = $("input[name='action']:checked").val();
+			$.ajax({
+				url : action,
+				type : 'POST',
+				data : formData,
+				async : false,
+				cache : false,
+				contentType : false,
+				enctype : 'multipart/form-data',
+				processData : false,
+				success : function(response) {
+					alert(response);
+				}
+			});
+			return false;
+		});
+	</script>
+</body>
+</html>

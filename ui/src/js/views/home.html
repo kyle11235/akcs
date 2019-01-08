@@ -1,0 +1,166 @@
+<!--
+ Copyright (c) 2014, 2017, Oracle and/or its affiliates.
+ The Universal Permissive License (UPL), Version 1.0
+ -->
+<div>
+
+    <div style="width: 80%; margin: 0 auto; padding-top: 20px;">
+
+        <div style="font-size: 18px">Applications <span data-bind="text: status"></span></div>
+
+        <div style="float: right;">
+            <oj-button on-click='[[create]]' class="oj-button-primary">Create Application</oj-button>
+        </div>
+
+        <div id="div">
+
+            <oj-table id='table' aria-label='Apps'
+                      data='[[datasource]]'
+                      columns='{{columnArray}}'
+                      style='width: 100%;'>
+            </oj-table>
+
+            <script type="text/html" id="type">
+                <td>
+                    <span data-bind="text: $context.row.type"></span>
+                </td>
+            </script>
+
+            <script type="text/html" id="url">
+                <td><a data-bind="attr: { href: 'http://' + $context.row.url}, text: 'http://' + $context.row.url" target="_blank"></a></td>
+            </script>
+
+            <script type="text/html" id="oracle_link_header">
+                <th style="padding-left: 5px; padding-right: 5px;">
+                    Actions (Partly Ready)
+                </th>
+            </script>
+
+            <script type="text/html" id="oracle_link">
+                <td>
+                    <a data-bind="attr: {onclick: 'update(\'' + $context.row.name + '\', \'' + $context.row.type + '\')'}">Update</a> | Delete | Log
+                </td>
+            </script>
+
+        </div>
+
+    </div>
+
+
+    <!-- popup -->
+    <oj-popup class="myPopup" id="popup" style="padding: 20px 10px; width: 30%;"
+              tail="none"
+              modality="modal">
+
+        <div data-bind="visible: showMe(1)">
+
+            <h1 class="title"><span data-bind="text: action"></span> Application</h1>  <span data-bind="text: status"></span>
+
+            <!-- form -->
+            <form class="form" id="form" method="POST" enctype="multipart/form-data">
+
+                <div data-bind="if: action() === 'Create'">
+                    <oj-input-text class="mt10 text" style="max-width:100%;border-top:none;" placeholder="{{placeholder}}"
+                                   value="{{name}}"
+                                   raw-value="{{name}}"
+                                   name="name"
+                    ></oj-input-text>
+                </div>
+                <div data-bind="if: action() === 'Update'">
+                    <oj-input-text class="mt10 text" style="max-width:100%;border-top:none;" placeholder="{{placeholder}}"
+                                   value="{{name}}"
+                                   raw-value="{{name}}"
+                                   name="name"
+                                   readonly
+                    ></oj-input-text>
+                </div>
+
+
+                <div class="mt10" style="color:red;" data-bind="text: warning"/>
+
+                <div data-bind="if: action() === 'Create'">
+                    <div class="oj-flex oj-sm-align-items-center ">
+                        <div class="oj-flex-item label">
+                            Type:
+                        </div>
+                        <div class="oj-flex-item">
+                            <oj-select-one id="basicSelect" name="type" value="{{type}}" style="max-width:20em">
+                                <!-- ko foreach: session.types -->
+                                <oj-option value="[[$data]]"><span data-bind="text: $data"></span></oj-option>
+                                <!-- /ko -->
+                            </oj-select-one>
+                        </div>
+                        <input type="hidden" name="type" data-bind="value: type"/>
+                    </div>
+                </div>
+
+                <div data-bind="if: action() === 'Update'">
+                    <div class="oj-flex oj-sm-align-items-center ">
+                        <div class="oj-flex-item label">
+                            Type:
+                        </div>
+                        <input readonly name="type"  data-bind="value: type"/>
+                    </div>
+                </div>
+
+                <div class="mt10">
+                    <input type="file" name="file" />
+                </div>
+
+                <div class="mt10 label" style="color:#C9C9C9" data-bind="if: type() === 'html'">
+                    Tips:
+                    <ul>
+                        <li>app.zip</li>
+                        <li>app.zip/index.html</li>
+                    </ul>
+                </div>
+
+                <div class="mt10 label" style="color:#C9C9C9" data-bind="if: type() === 'node'">
+                    Tips: index.js is a must, port 8080 is a must.
+                    <ul>
+                        <li>app.zip</li>
+                        <li>app.zip/index.js</li>
+                        <li>app.zip/node_modules</li>
+                    </ul>
+                </div>
+
+                <div class="mt10 label" style="color:#C9C9C9" data-bind="if: type() === 'jar'">
+                    Tips: the jar file should be an java app, port 8080 is a must.
+                    <ul>
+                        <li>app.jar</li>
+                    </ul>
+                </div>
+
+                <div class="mt10 label" style="color:#C9C9C9" data-bind="if: type() === 'war'">
+                    Tips: the war file will be renamed and deployed into a tomcat, so visit http://ip:port/app after deployment.
+                    <ul>
+                        <li>app.war</li>
+                    </ul>
+                </div>
+
+                <div class="mt10 center" data-bind="if: disabled">
+                    <span class="myGreyButton" style="width: 100%;"><span data-bind="text: action"></span></span>
+                </div>
+
+                <div class="mt10 center" data-bind="ifnot: disabled">
+                    <span class="myBlueButton" style="width: 100%;" data-bind="click: submit1"><span data-bind="text: action"></span></span>
+                </div>
+            </form>
+
+
+        </div>
+
+        <div data-bind="visible: showMe(2)">
+
+            <h1 class="title" data-bind="text: res"></h1>
+            <div style="color:#C9C9C9" data-bind="text: tips"></div>
+            <div class="mt10 center" data-bind="ifnot: disabled">
+                <span class="myBlueButton" style="width: 100%;" data-bind="click: close">CLose</span>
+            </div>
+
+
+        </div>
+
+    </oj-popup>
+
+</div>

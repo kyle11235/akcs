@@ -1,0 +1,205 @@
+/* jet and knockout */
+
+.jet .header {
+    margin-top: 20px;
+}
+
+.jet .avatar {
+    border-radius: 50%;
+    background-size: 35px 35px;
+    width: 35px;
+    height: 35px;
+    display: inline-block;
+}
+
+.jet .container {
+    display: inline-block;
+    margin: 0 10px;
+    vertical-align: top;
+}
+
+.jet .name {
+    font-weight: bold;
+}
+
+.knockout .header {
+    margin-top: 20px;
+}
+
+/* others */
+
+.myApp {
+    padding: 0px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* top tool bar */
+.myApp .tool_bar {
+    position: sticky;
+    top: 0px;
+    z-index: 1;
+}
+
+.myApp .tool_bar .title {
+    font-size: 16px;
+}
+
+.myApp .tool_bar .white {
+    color: white;
+}
+
+.myApp .tool_bar .white .oj-button.oj-default.oj-button-half-chrome .oj-button-icon, .oj-button.oj-focus-only.oj-button-half-chrome .oj-button-icon {
+    color: white;
+}
+
+.myApp .tool_bar .menus {
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+
+/* points */
+.myApp .points-top-section {
+    margin-top: -40px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    min-height: 180px;
+    text-align: center;
+
+    background: url(/images/home/background.png);
+    background-repeat: no-repeat;
+    background-position: center;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+}
+
+.myApp *, *:before, *:after {
+    box-sizing: inherit;
+}
+
+.myApp h1.points-name {
+    font-size: 48px;
+    color: #ffffff;
+}
+
+.myApp .points-title {
+    color: #ffffff;
+    font-size: 14px;
+}
+
+/* flowing flex layout */
+.myApp .items {
+    border: none;
+    text-align: center;
+}
+
+.myApp .items .item {
+    padding: 20px 10px;
+}
+
+.myApp .items .item .title {
+    font-size: 14px;
+    color: #252525;
+    margin-top: 5px;
+}
+
+.myApp .items .item .oj-avatar-outer {
+    border: none;
+}
+
+/* list */
+.myApp .list {
+    border: none;
+    overflow: hidden;
+}
+
+.myApp .list .avatar {
+    border-radius: 50%;
+    background-size: 35px 35px;
+    width: 35px;
+    height: 35px;
+    display: inline-block;
+}
+
+.myApp .list .oj-listview-item {
+    border: none;
+    background-image: none;
+}
+
+.myApp .list .row {
+    margin: 0 10px;
+    vertical-align: top;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.myApp .list .small {
+    margin-top: 5px;
+}
+
+
+/* has to be top level without .myApp because jet popup does not display popup inside root element */
+.myButton {
+    display: inline-block;
+    border:1px solid #CECED2;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.myBlueButton {
+    display: inline-block;
+    background-color: #2D8AFF;
+    padding: 10px 0;
+    color: white;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.myGreyButton {
+    display: inline-block;
+    background-color: #DEDEDE;
+    padding: 10px 0;
+    color: #999999;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.oj-inputtext-input, .oj-inputpassword-input, .oj-inputtext-nocomp, .oj-inputpassword-nocomp{
+    border: none;
+    border-bottom: 1px solid #C9C9C9;
+}
+
+.myPopup {
+
+}
+
+.myPopup .title{
+
+}
+
+.myApp .form{
+    padding:10px; background-color: white;
+}
+
+.myApp .form .label {
+    font-size: 16px;
+}
+
+.myApp .form .text{
+    font-size: 16px;
+}
+
+
+.mt10 {
+    margin-top:10px;
+}
+
+.center {
+    text-align: center;
+}
+
+
+
+
