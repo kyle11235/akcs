@@ -10,20 +10,20 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.rest.Config;
 import com.example.rest.model.App;
 import com.example.rest.model.Container;
 import com.example.rest.model.TypeEnum;
+import com.example.rest.util.Config;
 import com.example.rest.util.Shell;
 import com.example.rest.util.UnzipUtil;
 
@@ -38,61 +38,42 @@ public class AppServiceImpl implements AppService {
 	@Autowired
 	private APIService apiService;
 
-	@Value("${dockerPath}")
-	private String dockerPath;
-
-	@Value("${registryRepository}")
-	private String registryRepository;
-
-	@Value("${registryHost}")
-	private String registryHost;
-
-	@Value("${registryUsername}")
-	private String registryUsername;
-
-	@Value("${registryPassword}")
-	private String registryPassword;
-
-	@Value("${donotDeploy}")
-	private Boolean donotDeploy;
-
-	@Value("${namespace}")
-	private String namespace;
-
-	@Value("${labelName}")
-	private String labelName;
-
 	@Override
 	public List<App> listApps() {
 
 		List<App> out = new LinkedList<App>();
 
-		// all services
-		V1ServiceList services = apiService.listServices(namespace, labelName);
-		Map<String, V1Service> serviceMap = new HashMap<String, V1Service>();
-		if(services != null) {
-			for (V1Service service : services.getItems()) {
-				serviceMap.put(service.getMetadata().getName(), service);
-			}
+		if (Boolean.valueOf(Config.getValue("localMode"))) {
+			// TODO
+		} else {
+			// all services
+			V1ServiceList services = apiService.listServices(Config.getValue("namespace"),
+					Config.getValue("labelName"));
+			Map<String, V1Service> serviceMap = new HashMap<String, V1Service>();
+			if (services != null) {
+				for (V1Service service : services.getItems()) {
+					serviceMap.put(service.getMetadata().getName(), service);
+				}
 
-			// create apps based on pods that has label app
-			V1PodList pods = apiService.listPods(namespace, labelName);
-			for (V1Pod pod : pods.getItems()) {
-				String name = pod.getMetadata().getLabels().get(labelName);
-				App app = new App(name);
-				String type = pod.getMetadata().getLabels().get("type");
-				if (type != null) {
-					app.setType(TypeEnum.valueOf(type));
+				// create apps based on pods that has label app
+				V1PodList pods = apiService.listPods(Config.getValue("namespace"), Config.getValue("labelName"));
+				for (V1Pod pod : pods.getItems()) {
+					String name = pod.getMetadata().getLabels().get(Config.getValue("labelName"));
+					App app = new App(name);
+					String type = pod.getMetadata().getLabels().get("type");
+					if (type != null) {
+						app.setType(TypeEnum.valueOf(type));
+					}
+					app.setUrl(pod.getSpec().getNodeName());
+					V1Service service = serviceMap.get(name);
+					if (service != null) {
+						app.setUrl(app.getUrl() + ":" + service.getSpec().getPorts().get(0).getNodePort());
+					}
+					out.add(app);
 				}
-				app.setUrl(pod.getSpec().getNodeName());
-				V1Service service = serviceMap.get(name);
-				if (service != null) {
-					app.setUrl(app.getUrl() + ":" + service.getSpec().getPorts().get(0).getNodePort());
-				}
-				out.add(app);
 			}
 		}
-		
+
 		return out;
 	}
 
@@ -109,8 +90,12 @@ public class AppServiceImpl implements AppService {
 		}
 
 		// check if name is in use
-		if (apiService.getPod(namespace, labelName + "=" + name) != null) {
-			throw new Exception("name " + name + " is already in use");
+		if (Boolean.valueOf(Config.getValue("localMode"))) {
+			// TODO
+		} else {
+			if (apiService.getPod(Config.getValue("namespace"), Config.getValue("labelName") + "=" + name) != null) {
+				throw new Exception("name " + name + " is already in use");
+			}
 		}
 
 		// prepare app
@@ -120,9 +105,11 @@ public class AppServiceImpl implements AppService {
 		Container container = this.prepareContainer(app);
 
 		// deploy
-		if (!donotDeploy) {
-			apiService.createDeployment(namespace, container);
-			apiService.createService(namespace, container);
+		if (Boolean.valueOf(Config.getValue("localMode"))) {
+			this.deployLocal(container);
+		} else {
+			apiService.createDeployment(Config.getValue("namespace"), container);
+			apiService.createService(Config.getValue("namespace"), container);
 		}
 
 		System.out.println("finished createApp=" + name + ",type=" + type);
@@ -135,8 +122,12 @@ public class AppServiceImpl implements AppService {
 		System.out.println("start updateApp=" + name + ",type=" + type);
 
 		// check if name exists
-		if (apiService.getPod(namespace, labelName + "=" + name) == null) {
-			throw new Exception("name " + name + " does not exist");
+		if (Boolean.valueOf(Config.getValue("localMode"))) {
+			// TODO
+		} else {
+			if (apiService.getPod(Config.getValue("namespace"), Config.getValue("labelName") + "=" + name) == null) {
+				throw new Exception("name " + name + " does not exist");
+			}
 		}
 
 		// prepare app
@@ -146,8 +137,10 @@ public class AppServiceImpl implements AppService {
 		Container container = this.prepareContainer(app);
 
 		// deploy
-		if (!donotDeploy) {
-			apiService.replaceDeployment(namespace, container);
+		if (Boolean.valueOf(Config.getValue("localMode"))) {
+			this.deployLocal(container);
+		} else {
+			apiService.replaceDeployment(Config.getValue("namespace"), container);
 		}
 
 		System.out.println("finished updateApp=" + name + ",type=" + type);
@@ -206,30 +199,59 @@ public class AppServiceImpl implements AppService {
 		if (app.getType().equals(TypeEnum.html)) {
 			UnzipUtil.unzip(app.getSavedFile().getAbsolutePath(), app.getAppFile().getAbsolutePath());
 			app.getSavedFile().delete();
-			shellFile = new File(app.getBuilderFile(), "html/build.sh");
+			if (Boolean.valueOf(Config.getValue("localMode"))) {
+				shellFile = new File(app.getBuilderFile(), "html/buildLocal.sh");
+			} else {
+				shellFile = new File(app.getBuilderFile(), "html/build.sh");
+			}
 			port = 80;
 		}
 		if (app.getType().equals(TypeEnum.node)) {
 			UnzipUtil.unzip(app.getSavedFile().getAbsolutePath(), app.getAppFile().getAbsolutePath());
 			app.getSavedFile().delete();
-			shellFile = new File(app.getBuilderFile(), "node/build.sh");
+			if (Boolean.valueOf(Config.getValue("localMode"))) {
+				shellFile = new File(app.getBuilderFile(), "node/buildLocal.sh");
+			} else {
+				shellFile = new File(app.getBuilderFile(), "node/build.sh");
+			}
 			port = 8080;
 		}
 		if (app.getType().equals(TypeEnum.jar)) {
-			shellFile = new File(app.getBuilderFile(), "java/build.sh");
+			if (Boolean.valueOf(Config.getValue("localMode"))) {
+				shellFile = new File(app.getBuilderFile(), "java/buildLocal.sh");
+			} else {
+				shellFile = new File(app.getBuilderFile(), "java/build.sh");
+			}
 			port = 8080;
 		}
 		if (app.getType().equals(TypeEnum.war)) {
-			shellFile = new File(app.getBuilderFile(), "tomcat/build.sh");
+			if (Boolean.valueOf(Config.getValue("localMode"))) {
+				shellFile = new File(app.getBuilderFile(), "tomcat/buildLocal.sh");
+			} else {
+				shellFile = new File(app.getBuilderFile(), "tomcat/build.sh");
+			}
 			port = 8080;
 		}
 
-		String image = registryRepository + "/" + app.getName() + ":latest";
+		String image = Config.getValue("registryRepository") + "/" + app.getName() + ":latest";
 		Files.setPosixFilePermissions(shellFile.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
-		String[] params = { dockerPath, registryHost, registryUsername, registryPassword, app.getName(), image };
+		String[] params = { Config.getValue("dockerPath"), Config.getValue("registryHost"),
+				Config.getValue("registryUsername"), Config.getValue("registryPassword"), app.getName(), image };
 		Shell.executeParams(shellFile.getAbsolutePath(), params);
 
 		return new Container(app.getName(), app.getType(), image, port);
 	}
 
+	private void deployLocal(Container container) throws IOException {
+		File shellFile = new File(Config.BUILDER, "deployLocal.sh");
+		String image = container.getImage();
+		Files.setPosixFilePermissions(shellFile.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
+		
+		// TODO check availability
+		Random rand = new Random();
+		String port = String.valueOf(9000 + rand.nextInt(1000));
+
+		String[] params = { Config.getValue("dockerPath"), container.getName(), port ,container.getPort().toString(), image };
+		Shell.executeParams(shellFile.getAbsolutePath(), params);
+	}
 }

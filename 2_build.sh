@@ -1,0 +1,1 @@
+docker build -t kyle11235/akcs-api .

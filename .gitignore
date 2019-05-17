@@ -1,8 +1,11 @@
-/target/
-/ui/web/
-/ui/node_modules/
+/target
+/ui/web
+/ui/node_modules
+/ui/themes
+/ui/.idea/workspace.xml
 **/.DS_Store
 .classpath
 .project
 .settings/
-ui/.idea/workspace.xml
+/akcshome/apps
+/akcshome/builder

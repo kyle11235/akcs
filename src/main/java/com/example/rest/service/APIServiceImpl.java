@@ -6,10 +6,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.rest.model.Container;
+import com.example.rest.util.Config;
 import com.example.rest.util.Shell;
 
 import io.kubernetes.client.ApiClient;
@@ -35,7 +35,6 @@ import io.kubernetes.client.models.V1ServiceList;
 import io.kubernetes.client.models.V1ServicePort;
 import io.kubernetes.client.models.V1ServiceSpec;
 import io.kubernetes.client.models.V1Status;
-import io.kubernetes.client.util.Config;
 
 @Service(value = "apiService")
 public class APIServiceImpl implements APIService {
@@ -44,24 +43,9 @@ public class APIServiceImpl implements APIService {
 	private static CoreV1Api coreV1Api;
 	private static ExtensionsV1beta1Api extensionV1betaApi;
 
-	@Value("${pretty}")
-	private String pretty;
-
-	@Value("${isPrivateRegistry}")
-	private Boolean isPrivateRegistry;
-
-	@Value("${registrySecret}")
-	private String registrySecret;
-
-	@Value("${labelName}")
-	private String labelName;
-
-	@Value("${kubectlPath}")
-	private String kubectlPath;
-
 	static {
 		try {
-			ApiClient client = Config.defaultClient();
+			ApiClient client = io.kubernetes.client.util.Config.defaultClient();
 			appsV1betaApi = new AppsV1beta1Api(client);
 			coreV1Api = new CoreV1Api(client);
 			extensionV1betaApi = new ExtensionsV1beta1Api(client);
@@ -79,7 +63,7 @@ public class APIServiceImpl implements APIService {
 
 		try {
 			System.out.println("start createDeployment=" + container.getName());
-			AppsV1beta1Deployment result = appsV1betaApi.createNamespacedDeployment(namespace, body, pretty);
+			AppsV1beta1Deployment result = appsV1betaApi.createNamespacedDeployment(namespace, body, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null);
 			System.out.println("deployment is created");
 		} catch (ApiException e) {
 			e.printStackTrace();
@@ -98,9 +82,10 @@ public class APIServiceImpl implements APIService {
 			System.out.println("start replaceDeployment=" + container.getName());
 
 //			replace does not work
-//			AppsV1beta1Deployment result = appsV1betaApi.replaceNamespacedDeployment(container.getName(), namespace, body, pretty);
+//			AppsV1beta1Deployment result = appsV1betaApi.replaceNamespacedDeployment(container.getName(), namespace, body, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null);
 
-			// delete + create offers more flexibility (no need to match exact deployment labels)
+			// delete + create offers more flexibility (no need to match exact deployment
+			// labels)
 			this.deleteDeployment(namespace, container.getName());
 			this.createDeployment(namespace, container);
 
@@ -138,8 +123,8 @@ public class APIServiceImpl implements APIService {
 		// deployment/spec/template/spec/secret
 		List<V1LocalObjectReference> imagePullSecrets = new LinkedList<V1LocalObjectReference>();
 		V1LocalObjectReference v1LocalObjectReference = new V1LocalObjectReference();
-	
-		if(isPrivateRegistry) {
+
+		if (Boolean.valueOf(Config.getValue("privateRegistry"))) {
 			imagePullSecrets = new LinkedList<V1LocalObjectReference>();
 			v1LocalObjectReference = new V1LocalObjectReference();
 		}
@@ -162,26 +147,26 @@ public class APIServiceImpl implements APIService {
 		// deployment/spec/selector
 		deploySpec.setSelector(selector);
 		selector.setMatchLabels(matchLabels);
-		matchLabels.put(labelName, container.getName());
+		matchLabels.put(Config.getValue("labelName"), container.getName());
 		matchLabels.put("type", container.getType().toString());
 
 		// deployment/spec/template
 		deploySpec.setTemplate(template);
 		template.setMetadata(templateMetadata);
 		templateMetadata.setLabels(labels);
-		labels.put(labelName, container.getName());
+		labels.put(Config.getValue("labelName"), container.getName());
 		labels.put("type", container.getType().toString());
 
 		// deployment/spec/template/spec
 		template.setSpec(podSpec);
 
 		// deployment/spec/template/spec/secret
-		if(isPrivateRegistry) {
+		if (Boolean.valueOf(Config.getValue("privateRegistry"))) {
 			podSpec.setImagePullSecrets(imagePullSecrets);
-			v1LocalObjectReference.setName(registrySecret);
+			v1LocalObjectReference.setName(Config.getValue("registrySecret"));
 			imagePullSecrets.add(v1LocalObjectReference);
 		}
-		
+
 		// deployment/spec/template/spec/containers
 		podSpec.setContainers(containers);
 		containers.add(v1container);
@@ -204,14 +189,15 @@ public class APIServiceImpl implements APIService {
 		try {
 			System.out.println("start deleteDeployment=" + name);
 
-			// policy Foreground should delete underlying resources(replicaSet and pods) but does not work
-			
-//			V1Status result = appsV1betaApi.deleteNamespacedDeployment(name, namespace, body, pretty, gracePeriodSeconds, orphanDependents, propagationPolicy);
-//			extensionV1betaApi.deleteNamespacedDeployment(name, namespace, body, pretty, gracePeriodSeconds, orphanDependents, propagationPolicy);
+			// policy Foreground should delete underlying resources(replicaSet and pods) but
+			// does not work
 
-			String[] params = {"delete", "deployment", name, "-n", namespace};
-			Shell.executeParams(kubectlPath, params);
-			
+//			V1Status result = appsV1betaApi.deleteNamespacedDeployment(name, namespace, body, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, gracePeriodSeconds, orphanDependents, propagationPolicy);
+//			extensionV1betaApi.deleteNamespacedDeployment(name, namespace, body, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, gracePeriodSeconds, orphanDependents, propagationPolicy);
+
+			String[] params = { "delete", "deployment", name, "-n", namespace };
+			Shell.executeParams(Config.getValue("kubectlPath"), params);
+
 			System.out.println("deployment is deleted");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -250,7 +236,7 @@ public class APIServiceImpl implements APIService {
 		// service
 		body.setMetadata(serviceMetadata);
 		serviceMetadata.setName(container.getName());
-		labels.put(labelName, container.getName());
+		labels.put(Config.getValue("labelName"), container.getName());
 		labels.put("type", container.getType().toString());
 		serviceMetadata.setLabels(labels);
 
@@ -260,7 +246,7 @@ public class APIServiceImpl implements APIService {
 
 		// service/spec/selector
 		spec.setSelector(selector);
-		selector.put(labelName, container.getName());
+		selector.put(Config.getValue("labelName"), container.getName());
 
 		// service/spec/ports
 		spec.setPorts(ports);
@@ -270,7 +256,8 @@ public class APIServiceImpl implements APIService {
 
 		try {
 			System.out.println("start createService=" + container.getName());
-			V1Service result = coreV1Api.createNamespacedService(namespace, body, pretty);
+			V1Service result = coreV1Api.createNamespacedService(namespace, body,
+					Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null);
 			System.out.println("service is created");
 			return result.getSpec().getPorts().get(0).getNodePort();
 		} catch (ApiException e) {
@@ -283,7 +270,9 @@ public class APIServiceImpl implements APIService {
 	@Override
 	public Integer getService(String namespace, String labelSelector) {
 		try {
-			V1ServiceList list = coreV1Api.listNamespacedService(namespace, pretty, null, null, null, labelSelector, null, null, null, null);
+			V1ServiceList list = coreV1Api.listNamespacedService(namespace,
+					Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, null, null, null,
+					labelSelector, null, null, null, null);
 			if (list.getItems().size() > 0) {
 				V1Service service = list.getItems().get(0);
 				System.out.println("start getService=" + labelSelector);
@@ -299,7 +288,9 @@ public class APIServiceImpl implements APIService {
 	@Override
 	public V1ServiceList listServices(String namespace, String labelSelector) {
 		try {
-			return coreV1Api.listNamespacedService(namespace, pretty, null, null, null, labelSelector, null, null, null, null);
+			return coreV1Api.listNamespacedService(namespace,
+					Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, null, null, null,
+					labelSelector, null, null, null, null);
 		} catch (ApiException e) {
 			e.printStackTrace();
 			System.out.println(e.getResponseBody());
@@ -315,7 +306,9 @@ public class APIServiceImpl implements APIService {
 		String propagationPolicy = "Orphan";
 		try {
 			System.out.println("start deleteService=" + name);
-			V1Status result = coreV1Api.deleteNamespacedService(name, namespace, body, pretty, gracePeriodSeconds, orphanDependents, propagationPolicy);
+			V1Status result = coreV1Api.deleteNamespacedService(name, namespace, body,
+					Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null,
+					gracePeriodSeconds, orphanDependents, propagationPolicy);
 			System.out.println("service is deleted");
 		} catch (ApiException e) {
 			e.printStackTrace();
@@ -327,7 +320,8 @@ public class APIServiceImpl implements APIService {
 	@Override
 	public String getPod(String namespace, String labelSelector) {
 		try {
-			V1PodList list = coreV1Api.listNamespacedPod(namespace, pretty, null, null, null, labelSelector, null, null, null, null);
+			V1PodList list = coreV1Api.listNamespacedPod(namespace, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, null, null, null, labelSelector, null, null,
+					null, null);
 			if (list.getItems().size() > 0) {
 				V1Pod pod = list.getItems().get(0);
 				System.out.println("start getPod=" + labelSelector);
@@ -342,7 +336,8 @@ public class APIServiceImpl implements APIService {
 	@Override
 	public V1PodList listPods(String namespace, String labelSelector) {
 		try {
-			return coreV1Api.listNamespacedPod(namespace, pretty, null, null, null, labelSelector, null, null, null, null);
+			return coreV1Api.listNamespacedPod(namespace, Boolean.valueOf(Config.getValue(Config.getValue("localMode"))) ? "pretty" : null, null, null, null, labelSelector, null, null, null,
+					null);
 		} catch (ApiException e) {
 			e.printStackTrace();
 		}

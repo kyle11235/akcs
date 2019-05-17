@@ -6,8 +6,8 @@ define(['ojs/ojcore', 'knockout', 'jquery', 'text!data/data.json'],
 
             /* all the interaction between frontend and backend are handled by session.js */
             // self.baseAPI = 'http://' + window.location.hostname + ':8080';
-            self.baseAPI = 'http://xxx:8080';
-            //self.baseAPI = 'http://localhost:8080';
+            // self.baseAPI = 'http://xxx:8080';
+            self.baseAPI = 'http://localhost:8080';
             self.types = ['html', 'node', 'jar', 'war'];
 
 
